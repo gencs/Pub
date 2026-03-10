@@ -3,9 +3,545 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Hello World</title>
+  <title>Nursery Schedule</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --p1: #4f46e5;
+      --p1-light: #e0e7ff;
+      --p2: #059669;
+      --p2-light: #d1fae5;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --border: #e2e8f0;
+      --text: #1e293b;
+      --text-muted: #64748b;
+      --radius: 12px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    header {
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    header h1 {
+      font-size: 1.4rem;
+      font-weight: 700;
+    }
+
+    .week-nav {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .week-nav button {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 12px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: background 0.15s;
+    }
+
+    .week-nav button:hover { background: var(--border); }
+
+    .week-nav span {
+      font-size: 0.95rem;
+      font-weight: 500;
+      min-width: 180px;
+      text-align: center;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 24px 16px;
+    }
+
+    /* Setup panel */
+    .setup {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+
+    .setup h2 {
+      font-size: 1.1rem;
+      margin-bottom: 16px;
+    }
+
+    .parent-inputs {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .parent-input {
+      flex: 1;
+      min-width: 200px;
+    }
+
+    .parent-input label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 6px;
+    }
+
+    .parent-input.p1 label { color: var(--p1); }
+    .parent-input.p2 label { color: var(--p2); }
+
+    .parent-input input {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 1rem;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .parent-input.p1 input:focus { border-color: var(--p1); }
+    .parent-input.p2 input:focus { border-color: var(--p2); }
+
+    /* Legend */
+    .legend {
+      display: flex;
+      gap: 20px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+
+    .legend-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+    }
+
+    .legend-dot.p1 { background: var(--p1); }
+    .legend-dot.p2 { background: var(--p2); }
+
+    /* Schedule grid */
+    .schedule {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .schedule-header {
+      display: grid;
+      grid-template-columns: 100px 1fr 1fr;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+    }
+
+    .schedule-header > div {
+      padding: 12px 16px;
+      text-align: center;
+    }
+
+    .schedule-header > div:first-child { text-align: left; }
+
+    .day-row {
+      display: grid;
+      grid-template-columns: 100px 1fr 1fr;
+      border-bottom: 1px solid var(--border);
+      transition: background 0.1s;
+    }
+
+    .day-row:last-child { border-bottom: none; }
+    .day-row:hover { background: #fafbfd; }
+
+    .day-row.weekend { background: #fefce8; }
+    .day-row.weekend:hover { background: #fef9c3; }
+
+    .day-label {
+      padding: 16px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .day-label .date {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-weight: 400;
+      margin-top: 2px;
+    }
+
+    .day-cell {
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-left: 1px solid var(--border);
+    }
+
+    .toggle-btn {
+      width: 100%;
+      padding: 10px 8px;
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      background: var(--card);
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      transition: all 0.15s;
+      text-align: center;
+    }
+
+    .toggle-btn:hover {
+      border-color: #cbd5e1;
+      background: var(--bg);
+    }
+
+    .toggle-btn.p1 {
+      background: var(--p1-light);
+      border-color: var(--p1);
+      color: var(--p1);
+    }
+
+    .toggle-btn.p2 {
+      background: var(--p2-light);
+      border-color: var(--p2);
+      color: var(--p2);
+    }
+
+    /* Summary */
+    .summary {
+      margin-top: 24px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+    }
+
+    .summary h3 {
+      font-size: 0.95rem;
+      margin-bottom: 12px;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .summary-card {
+      padding: 16px;
+      border-radius: 8px;
+      text-align: center;
+    }
+
+    .summary-card.p1 { background: var(--p1-light); color: var(--p1); }
+    .summary-card.p2 { background: var(--p2-light); color: var(--p2); }
+
+    .summary-card .name {
+      font-weight: 600;
+      font-size: 0.95rem;
+      margin-bottom: 8px;
+    }
+
+    .summary-stats {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      font-size: 0.85rem;
+    }
+
+    .summary-stats span {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .summary-stats .num {
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+
+    /* Today highlight */
+    .day-row.today {
+      background: #eff6ff;
+    }
+
+    .day-row.today:hover {
+      background: #dbeafe;
+    }
+
+    .day-label .today-badge {
+      font-size: 0.65rem;
+      background: var(--p1);
+      color: white;
+      padding: 1px 6px;
+      border-radius: 4px;
+      margin-top: 4px;
+      width: fit-content;
+    }
+
+    /* Responsive */
+    @media (max-width: 500px) {
+      .schedule-header { grid-template-columns: 70px 1fr 1fr; }
+      .day-row { grid-template-columns: 70px 1fr 1fr; }
+      .day-label { padding: 12px 8px; font-size: 0.85rem; }
+      .toggle-btn { padding: 8px 4px; font-size: 0.8rem; }
+      header h1 { font-size: 1.1rem; }
+    }
+  </style>
 </head>
 <body>
-  <h1>Hello World</h1>
+
+<header>
+  <h1>Nursery Schedule</h1>
+  <div class="week-nav">
+    <button onclick="changeWeek(-1)">&larr; Prev</button>
+    <span id="weekLabel"></span>
+    <button onclick="changeWeek(1)">Next &rarr;</button>
+  </div>
+</header>
+
+<div class="container">
+  <div class="setup">
+    <h2>Parents</h2>
+    <div class="parent-inputs">
+      <div class="parent-input p1">
+        <label>Parent 1</label>
+        <input id="p1Name" type="text" placeholder="e.g. Mum" value="">
+      </div>
+      <div class="parent-input p2">
+        <label>Parent 2</label>
+        <input id="p2Name" type="text" placeholder="e.g. Dad" value="">
+      </div>
+    </div>
+  </div>
+
+  <div class="legend" id="legend"></div>
+
+  <div class="schedule">
+    <div class="schedule-header">
+      <div>Day</div>
+      <div>Drop-off</div>
+      <div>Pick-up</div>
+    </div>
+    <div id="scheduleBody"></div>
+  </div>
+
+  <div class="summary" id="summary"></div>
+</div>
+
+<script>
+  const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  const SHORT_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+  let currentWeekStart = getMonday(new Date());
+  let schedule = {};
+  let parentNames = { p1: '', p2: '' };
+
+  function getMonday(d) {
+    const date = new Date(d);
+    const day = date.getDay();
+    const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+    date.setDate(diff);
+    date.setHours(0, 0, 0, 0);
+    return date;
+  }
+
+  function weekKey(date) {
+    return date.toISOString().slice(0, 10);
+  }
+
+  function loadData() {
+    try {
+      const saved = localStorage.getItem('nursery-schedule');
+      if (saved) {
+        const data = JSON.parse(saved);
+        schedule = data.schedule || {};
+        parentNames = data.parentNames || { p1: '', p2: '' };
+      }
+    } catch (e) { /* ignore */ }
+    document.getElementById('p1Name').value = parentNames.p1;
+    document.getElementById('p2Name').value = parentNames.p2;
+  }
+
+  function saveData() {
+    parentNames.p1 = document.getElementById('p1Name').value.trim();
+    parentNames.p2 = document.getElementById('p2Name').value.trim();
+    localStorage.setItem('nursery-schedule', JSON.stringify({ schedule, parentNames }));
+  }
+
+  function getP1() { return document.getElementById('p1Name').value.trim() || 'Parent 1'; }
+  function getP2() { return document.getElementById('p2Name').value.trim() || 'Parent 2'; }
+
+  function getSlotKey(dayIndex, type) {
+    const date = new Date(currentWeekStart);
+    date.setDate(date.getDate() + dayIndex);
+    return `${weekKey(date)}-${type}`;
+  }
+
+  function getSlotValue(dayIndex, type) {
+    return schedule[getSlotKey(dayIndex, type)] || null;
+  }
+
+  function toggleSlot(dayIndex, type) {
+    const key = getSlotKey(dayIndex, type);
+    const current = schedule[key] || null;
+    if (current === null) schedule[key] = 'p1';
+    else if (current === 'p1') schedule[key] = 'p2';
+    else delete schedule[key];
+    saveData();
+    render();
+  }
+
+  function changeWeek(offset) {
+    currentWeekStart.setDate(currentWeekStart.getDate() + 7 * offset);
+    render();
+  }
+
+  function formatDate(date) {
+    return `${date.getDate()} ${MONTHS[date.getMonth()]}`;
+  }
+
+  function render() {
+    const wk = weekKey(currentWeekStart);
+    const endDate = new Date(currentWeekStart);
+    endDate.setDate(endDate.getDate() + 6);
+    document.getElementById('weekLabel').textContent =
+      `${formatDate(currentWeekStart)} \u2013 ${formatDate(endDate)}`;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Legend
+    document.getElementById('legend').innerHTML = `
+      <div class="legend-item"><div class="legend-dot p1"></div>${getP1()}</div>
+      <div class="legend-item"><div class="legend-dot p2"></div>${getP2()}</div>
+    `;
+
+    // Schedule rows
+    let html = '';
+    let counts = { p1: { dropoff: 0, pickup: 0 }, p2: { dropoff: 0, pickup: 0 } };
+
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(currentWeekStart);
+      date.setDate(date.getDate() + i);
+      date.setHours(0, 0, 0, 0);
+
+      const isToday = date.getTime() === today.getTime();
+      const isWeekend = i >= 5;
+
+      const dropoff = getSlotValue(i, 'dropoff');
+      const pickup = getSlotValue(i, 'pickup');
+
+      if (dropoff) counts[dropoff].dropoff++;
+      if (pickup) counts[pickup].pickup++;
+
+      const btnLabel = (val) => {
+        if (val === 'p1') return getP1();
+        if (val === 'p2') return getP2();
+        return '\u2014';
+      };
+
+      const btnClass = (val) => {
+        if (val === 'p1') return 'toggle-btn p1';
+        if (val === 'p2') return 'toggle-btn p2';
+        return 'toggle-btn';
+      };
+
+      let rowClass = 'day-row';
+      if (isToday) rowClass += ' today';
+      else if (isWeekend) rowClass += ' weekend';
+
+      html += `
+        <div class="${rowClass}">
+          <div class="day-label">
+            ${DAYS[i]}
+            <span class="date">${formatDate(date)}</span>
+            ${isToday ? '<span class="today-badge">TODAY</span>' : ''}
+          </div>
+          <div class="day-cell">
+            <button class="${btnClass(dropoff)}" onclick="toggleSlot(${i},'dropoff')">
+              ${btnLabel(dropoff)}
+            </button>
+          </div>
+          <div class="day-cell">
+            <button class="${btnClass(pickup)}" onclick="toggleSlot(${i},'pickup')">
+              ${btnLabel(pickup)}
+            </button>
+          </div>
+        </div>`;
+    }
+
+    document.getElementById('scheduleBody').innerHTML = html;
+
+    // Summary
+    document.getElementById('summary').innerHTML = `
+      <h3>Weekly Summary</h3>
+      <div class="summary-grid">
+        <div class="summary-card p1">
+          <div class="name">${getP1()}</div>
+          <div class="summary-stats">
+            <span><span class="num">${counts.p1.dropoff}</span> drop-offs</span>
+            <span><span class="num">${counts.p1.pickup}</span> pick-ups</span>
+          </div>
+        </div>
+        <div class="summary-card p2">
+          <div class="name">${getP2()}</div>
+          <div class="summary-stats">
+            <span><span class="num">${counts.p2.dropoff}</span> drop-offs</span>
+            <span><span class="num">${counts.p2.pickup}</span> pick-ups</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // Init
+  loadData();
+  render();
+
+  document.getElementById('p1Name').addEventListener('input', () => { saveData(); render(); });
+  document.getElementById('p2Name').addEventListener('input', () => { saveData(); render(); });
+</script>
+
 </body>
 </html>
