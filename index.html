@@ -159,7 +159,7 @@
 
     .schedule-header {
       display: grid;
-      grid-template-columns: 100px 1fr 1fr;
+      grid-template-columns: 100px 1fr 1fr 1fr;
       background: var(--bg);
       border-bottom: 1px solid var(--border);
       font-size: 0.8rem;
@@ -178,7 +178,7 @@
 
     .day-row {
       display: grid;
-      grid-template-columns: 100px 1fr 1fr;
+      grid-template-columns: 100px 1fr 1fr 1fr;
       border-bottom: 1px solid var(--border);
       transition: background 0.1s;
     }
@@ -186,8 +186,7 @@
     .day-row:last-child { border-bottom: none; }
     .day-row:hover { background: #fafbfd; }
 
-    .day-row.weekend { background: #fefce8; }
-    .day-row.weekend:hover { background: #fef9c3; }
+
 
     .day-label {
       padding: 16px;
@@ -239,6 +238,44 @@
     }
 
     .toggle-btn.p2 {
+      background: var(--p2-light);
+      border-color: var(--p2);
+      color: var(--p2);
+    }
+
+    /* WFH chips */
+    .wfh-chips {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .wfh-chip {
+      padding: 4px 10px;
+      border: 1.5px solid var(--border);
+      border-radius: 20px;
+      background: var(--card);
+      cursor: pointer;
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+
+    .wfh-chip:hover {
+      border-color: #cbd5e1;
+      background: var(--bg);
+    }
+
+    .wfh-chip.p1-active {
+      background: var(--p1-light);
+      border-color: var(--p1);
+      color: var(--p1);
+    }
+
+    .wfh-chip.p2-active {
       background: var(--p2-light);
       border-color: var(--p2);
       color: var(--p2);
@@ -320,8 +357,8 @@
 
     /* Responsive */
     @media (max-width: 500px) {
-      .schedule-header { grid-template-columns: 70px 1fr 1fr; }
-      .day-row { grid-template-columns: 70px 1fr 1fr; }
+      .schedule-header { grid-template-columns: 70px 1fr 1fr 1fr; }
+      .day-row { grid-template-columns: 70px 1fr 1fr 1fr; }
       .day-label { padding: 12px 8px; font-size: 0.85rem; }
       .toggle-btn { padding: 8px 4px; font-size: 0.8rem; }
       header h1 { font-size: 1.1rem; }
@@ -361,6 +398,7 @@
       <div>Day</div>
       <div>Drop-off</div>
       <div>Pick-up</div>
+      <div>WFH</div>
     </div>
     <div id="scheduleBody"></div>
   </div>
@@ -369,12 +407,13 @@
 </div>
 
 <script>
-  const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-  const SHORT_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+  const SHORT_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
   const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
   let currentWeekStart = getMonday(new Date());
   let schedule = {};
+  let wfh = {};
   let parentNames = { p1: '', p2: '' };
 
   function getMonday(d) {
@@ -396,6 +435,7 @@
       if (saved) {
         const data = JSON.parse(saved);
         schedule = data.schedule || {};
+        wfh = data.wfh || {};
         parentNames = data.parentNames || { p1: '', p2: '' };
       }
     } catch (e) { /* ignore */ }
@@ -406,7 +446,7 @@
   function saveData() {
     parentNames.p1 = document.getElementById('p1Name').value.trim();
     parentNames.p2 = document.getElementById('p2Name').value.trim();
-    localStorage.setItem('nursery-schedule', JSON.stringify({ schedule, parentNames }));
+    localStorage.setItem('nursery-schedule', JSON.stringify({ schedule, wfh, parentNames }));
   }
 
   function getP1() { return document.getElementById('p1Name').value.trim() || 'Parent 1'; }
@@ -420,6 +460,20 @@
 
   function getSlotValue(dayIndex, type) {
     return schedule[getSlotKey(dayIndex, type)] || null;
+  }
+
+  function getWfhKey(dayIndex, parent) {
+    const date = new Date(currentWeekStart);
+    date.setDate(date.getDate() + dayIndex);
+    return `${weekKey(date)}-wfh-${parent}`;
+  }
+
+  function toggleWfh(dayIndex, parent) {
+    const key = getWfhKey(dayIndex, parent);
+    if (wfh[key]) delete wfh[key];
+    else wfh[key] = true;
+    saveData();
+    render();
   }
 
   function toggleSlot(dayIndex, type) {
@@ -444,7 +498,7 @@
   function render() {
     const wk = weekKey(currentWeekStart);
     const endDate = new Date(currentWeekStart);
-    endDate.setDate(endDate.getDate() + 6);
+    endDate.setDate(endDate.getDate() + 4);
     document.getElementById('weekLabel').textContent =
       `${formatDate(currentWeekStart)} \u2013 ${formatDate(endDate)}`;
 
@@ -459,21 +513,24 @@
 
     // Schedule rows
     let html = '';
-    let counts = { p1: { dropoff: 0, pickup: 0 }, p2: { dropoff: 0, pickup: 0 } };
+    let counts = { p1: { dropoff: 0, pickup: 0, wfh: 0 }, p2: { dropoff: 0, pickup: 0, wfh: 0 } };
 
-    for (let i = 0; i < 7; i++) {
+    for (let i = 0; i < 5; i++) {
       const date = new Date(currentWeekStart);
       date.setDate(date.getDate() + i);
       date.setHours(0, 0, 0, 0);
 
       const isToday = date.getTime() === today.getTime();
-      const isWeekend = i >= 5;
 
       const dropoff = getSlotValue(i, 'dropoff');
       const pickup = getSlotValue(i, 'pickup');
+      const p1Wfh = wfh[getWfhKey(i, 'p1')] || false;
+      const p2Wfh = wfh[getWfhKey(i, 'p2')] || false;
 
       if (dropoff) counts[dropoff].dropoff++;
       if (pickup) counts[pickup].pickup++;
+      if (p1Wfh) counts.p1.wfh++;
+      if (p2Wfh) counts.p2.wfh++;
 
       const btnLabel = (val) => {
         if (val === 'p1') return getP1();
@@ -489,7 +546,6 @@
 
       let rowClass = 'day-row';
       if (isToday) rowClass += ' today';
-      else if (isWeekend) rowClass += ' weekend';
 
       html += `
         <div class="${rowClass}">
@@ -508,6 +564,12 @@
               ${btnLabel(pickup)}
             </button>
           </div>
+          <div class="day-cell">
+            <div class="wfh-chips">
+              <button class="wfh-chip${p1Wfh ? ' p1-active' : ''}" onclick="toggleWfh(${i},'p1')">${getP1()}</button>
+              <button class="wfh-chip${p2Wfh ? ' p2-active' : ''}" onclick="toggleWfh(${i},'p2')">${getP2()}</button>
+            </div>
+          </div>
         </div>`;
     }
 
@@ -522,6 +584,7 @@
           <div class="summary-stats">
             <span><span class="num">${counts.p1.dropoff}</span> drop-offs</span>
             <span><span class="num">${counts.p1.pickup}</span> pick-ups</span>
+            <span><span class="num">${counts.p1.wfh}</span> WFH</span>
           </div>
         </div>
         <div class="summary-card p2">
@@ -529,6 +592,7 @@
           <div class="summary-stats">
             <span><span class="num">${counts.p2.dropoff}</span> drop-offs</span>
             <span><span class="num">${counts.p2.pickup}</span> pick-ups</span>
+            <span><span class="num">${counts.p2.wfh}</span> WFH</span>
           </div>
         </div>
       </div>
